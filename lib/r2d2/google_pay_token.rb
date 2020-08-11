@@ -71,20 +71,20 @@ module R2D2
 
     def verify_and_parse_message_ecv2
       raise SignatureInvalidError, 'intermediate certificate is expired' if intermediate_key_expired?
-      raise SignatureInvalidError, 'no valid signature of intermediate key' unless root_key_signature_verified?
-      raise SignatureInvalidError, 'signature of signedMessage does not match' unless intermediate_key_signature_verified?
+      raise SignatureInvalidError, 'no valid signature of intermediate key' unless intermediate_key_signature_verified?
+      raise SignatureInvalidError, 'signature of signedMessage does not match' unless root_key_signature_verified?
 
       JSON.parse(signed_message)
     end
 
     ### ECv2 Methods ###
-    def root_key_signature_verified?
+    def intermediate_key_signature_verified?
       intermediate_signatures = intermediate_signing_key['signatures']
-      signed_bytes = ['Google', protocol_version, intermediate_signing_key['signedKey']].map do |str|
+      signed_bytes = [sender_id, protocol_version, intermediate_signing_key['signedKey']].map do |str|
         [str.length].pack('V') + str
       end.join
 
-      # Check that a root signing key signed the intermediate
+      # Check at least one of the intermediate keys signed the message
       valid_key_signatures?(
         verification_keys,
         intermediate_signatures,
@@ -92,8 +92,8 @@ module R2D2
       )
     end
 
-    def intermediate_key_signature_verified?
-      signed_string_message = ['Google', recipient_id, protocol_version, signed_message].map do |str|
+    def root_key_signature_verified?
+      signed_string_message = [sender_id, ecv2_recipient_id, protocol_version, signed_message].map do |str|
         [str.length].pack('V') + str
       end.join
 
@@ -107,10 +107,9 @@ module R2D2
     end
 
     def valid_key_signatures?(signing_keys, signatures, signed)
-      signing_keys.product(signatures).each do |key, sig|
-        return true if key.verify(OpenSSL::Digest::SHA256.new, Base64.strict_decode64(sig), signed)
+      signing_keys.product(signatures).any? do |key, sig|
+        key.verify(OpenSSL::Digest::SHA256.new, Base64.strict_decode64(sig), signed)
       end
-      false
     end
 
     def verification_keys
@@ -132,6 +131,14 @@ module R2D2
 
     def intermediate_signing_key_signed_key
       @intermediate_signing_key_signed_key ||= JSON.parse(intermediate_signing_key['signedKey'])
+    end
+
+    def ecv2_recipient_id
+      "merchant:#{recipient_id}"
+    end
+
+    def sender_id
+      'Google'
     end
   end
 end
