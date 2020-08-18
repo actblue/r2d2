@@ -72,7 +72,7 @@ module R2D2
     def verify_and_parse_message_ecv2
       raise SignatureInvalidError, 'intermediate certificate is expired' if intermediate_key_expired?
       raise SignatureInvalidError, 'no valid signature of intermediate key' unless intermediate_key_signature_verified?
-      raise SignatureInvalidError, 'signature of signedMessage does not match' unless root_key_signature_verified?
+      raise SignatureInvalidError, 'signature of signedMessage does not match' unless payload_signature_verified?
 
       JSON.parse(signed_message)
     end
@@ -92,7 +92,7 @@ module R2D2
       )
     end
 
-    def root_key_signature_verified?
+    def payload_signature_verified?
       signed_string_message = [sender_id, ecv2_recipient_id, protocol_version, signed_message].map do |str|
         [str.length].pack('V') + str
       end.join
