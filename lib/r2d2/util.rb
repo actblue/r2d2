@@ -100,7 +100,7 @@ module R2D2
       end
 
       def hkdf(key_material, info, length)
-        HKDF.new(key_material, algorithm: 'SHA256', info: info).next_bytes(length)
+        HKDF.new(key_material, algorithm: 'SHA256', info: info).read(length)
       end
     end
   end
