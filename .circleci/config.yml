@@ -10,6 +10,7 @@ jobs:
   ruby-2.2:
     docker:
       - image: circleci/ruby:2.2.10
+    resource_class: medium.gen2
     steps:
       - checkout
       - run: bundle
